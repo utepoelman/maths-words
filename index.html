@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maths Vocabulary with Nugget</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #28a745;
+            --error: #dc3545;
+            --bg: #f0f2f5;
+            --text: #333;
+            --zone-bg: #e9ecef;
+            --line-color: #555;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* HEADER & CONTROLS */
+        .header-area {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .header-text { text-align: center; }
+        h1 { margin: 0 0 10px 0; color: #444; }
+        .subtitle { color: #666; margin: 0; max-width: 600px; }
+        .nugget-mascot { width: 80px; height: auto; animation: float 3s ease-in-out infinite; }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .progress-wrapper {
+            width: 100%; max-width: 900px;
+            height: 30px; background: #ddd; border-radius: 15px;
+            display: flex; overflow: hidden; margin-bottom: 20px;
+        }
+        .progress-segment {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: #999; background: #eee; border-right: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .progress-segment:last-child { border: none; }
+        .progress-segment.active { background: #fff; color: var(--primary); box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
+        .progress-segment.done { background: var(--success); color: white; }
+
+        .control-bar { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
+        button {
+            padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;
+            font-size: 16px; transition: transform 0.1s; font-family: inherit;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        
+        .btn-help { background-color: #17a2b8; color: white; }
+        .btn-reset { background-color: #ffc107; color: #333; }
+        .btn-random { background-color: #6c757d; color: white; }
+        .btn-next { background-color: var(--success); color: white; display: none; font-size: 18px; font-weight: bold; padding: 12px 30px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-print { background-color: #4a90e2; color: white; margin-top: 20px; font-weight: bold;}
+
+        /* GAME LAYOUT */
+        .game-container {
+            display: flex;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+            align-items: flex-start;
+            position: relative;
+        }
+
+        /* WORD BANK (Sticky) */
+        .word-bank {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 200px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-content: flex-start;
+            border: 2px solid #ddd;
+            position: sticky;
+            top: 20px;
+            max-height: 80vh; 
+            overflow-y: auto;
+            z-index: 100;
+        }
+        .word-bank h3 { width: 100%; margin-top: 0; text-align: center; color: #666; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        /* WORKSPACE */
+        .workspace {
+            flex: 2.5;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* DRAGGABLE TILES */
+        .tile {
+            background-color: var(--primary);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: grab;
+            user-select: none;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            display: inline-block;
+            margin: 0;
+            z-index: 10;
+        }
+        .tile:active { cursor: grabbing; }
+        .tile.correct { background-color: var(--success); cursor: default; }
+        .tile.shaking { animation: shake 0.5s ease-in-out; }
+        @keyframes shake {
+            0% { transform: translateX(0); background-color: var(--error); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); background-color: var(--primary); }
+        }
+
+        /* DIAGRAM CONTAINERS */
+        .diagram-row {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            min-height: 160px; /* Reduced min-height for compactness */
+            position: relative;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            overflow: visible;
+        }
+        
+        /* SVG OVERLAY */
+        .svg-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1;
+        }
+        .svg-overlay line, .svg-overlay path, .svg-overlay rect {
+            stroke: var(--line-color); stroke-width: 2; fill: none;
+        }
+        .dashed-lasso { stroke-dasharray: 5, 5; stroke: #888 !important; }
+
+        /* DROP ZONES */
+        .drop-zone {
+            min-width: 100px; height: 35px;
+            border: 2px dashed #bbb; background-color: var(--zone-bg);
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #aaa; transition: background 0.2s;
+            z-index: 2; position: absolute; text-align: center; padding: 0 5px;
+        }
+        .drop-zone.drag-over { background-color: #d1e7dd; border-color: var(--success); }
+        .drop-zone .tile { width: 100%; height: 100%; font-size: 13px; display: flex; align-items: center; justify-content: center;}
+
+        /* MATH ELEMENTS */
+        .math-content {
+            font-size: 32px; font-weight: bold; font-family: 'Times New Roman', Times, serif;
+            position: absolute; z-index: 2;
+        }
+        .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 10px; }
+        .frac-bar { width: 100%; height: 3px; background-color: #000; margin: 2px 0; }
+        .exponent { display: inline-flex; align-items: flex-start; }
+        .base { font-size: 40px; }
+        .power-num { font-size: 24px; margin-top: -10px; }
+
+        /* LIST VIEW FOR PART 3 */
+        .set-row {
+            background: white; padding: 15px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: flex-start;
+            gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 18px; color: #444; width: 100%; box-sizing: border-box; position: relative;
+        }
+        .set-row .drop-zone { position: relative; }
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 15px;
+            max-width: 500px; width: 90%; text-align: center;
+            position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #888; }
+        
+        /* CERTIFICATE & PRINTING */
+        #certificate-view { display: none; text-align: center; width: 100%; max-width: 800px; }
+        .cert-paper {
+            background: #fff; padding: 40px; border: 10px double #4a90e2;
+            border-radius: 20px; position: relative; margin: 20px auto;
+            color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%; box-sizing: border-box; /* Responsive width */
+        }
+        .cert-title { font-size: 42px; color: #d4af37; margin-bottom: 10px; font-family: 'Georgia', serif; }
+        .cert-body { font-size: 18px; line-height: 1.6; margin: 20px 0; }
+        .signature-section { margin-top: 40px; display: flex; justify-content: flex-end; align-items: center; gap: 20px; }
+        .paw-print { font-size: 40px; color: #4a90e2; transform: rotate(20deg); opacity: 0.6; }
+
+        @media print {
+            @page { 
+                size: portrait;
+                margin: 2cm 2cm 0 2cm; 
+            }
+            body { 
+                margin: 0; padding: 0; background: white; 
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            body * { visibility: hidden; }
+            #certificate-view, #certificate-view * { visibility: visible; }
+            #certificate-view { 
+                position: absolute; left: 0; top: 0; width: 100%; 
+                display: block !important; 
+            }
+            .cert-paper { 
+                box-shadow: none; 
+                border: 8px double #4a90e2; 
+                width: 100%; /* Fits to page margin */
+                height: auto; /* Maintains Aspect Ratio */
+                margin: 0; 
+            }
+            .no-print, .btn-print, .subtitle { display: none !important; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header-area">
+        <img src="Nugget.png" alt="Nugget" class="nugget-mascot">
+        <div class="header-text">
+            <h1>Maths Vocabulary with Nugget</h1>
+            <p class="subtitle">Drag the words from the bank. Watch out for the thin lines!</p>
+        </div>
+    </div>
+
+    <div class="progress-wrapper">
+        <div id="prog1" class="progress-segment active">Part 1: Operations</div>
+        <div id="prog2" class="progress-segment">Part 2: Structures</div>
+        <div id="prog3" class="progress-segment">Part 3: Number Sets</div>
+        <div id="prog4" class="progress-segment">Certificate</div>
+    </div>
+
+    <div class="control-bar" id="controls">
+        <button class="btn-help" onclick="openHelp()">Ask Nugget!</button>
+        <button class="btn-reset" onclick="resetPart()">Reset</button>
+        <button class="btn-random" onclick="randomize()">New Numbers</button>
+    </div>
+
+    <div class="game-container" id="gameInterface">
+        <div class="word-bank" id="wordBank">
+            <h3>Word Bank</h3>
+            </div>
+
+        <div class="workspace" id="workspace">
+            </div>
+    </div>
+    
+    <button id="nextBtn" class="btn-next" onclick="nextPart()">Next Part &rarr;</button>
+    <button id="certBtn" class="btn-next" onclick="openCertInput()">Get Certificate!</button>
+
+    <div id="helpModal" class="modal-overlay" onclick="closeModal(event, 'helpModal')">
+        <div class="modal-content">
+            <span class="close-btn" onclick="document.getElementById('helpModal').style.display='none'">&times;</span>
+            <div style="display:flex; align-items:center; gap:20px; text-align:left;">
+                <img src="Nugget.png" alt="Nugget" style="width:100px; height:auto;">
+                <div>
+                    <h2 style="margin-top:0; color:#4a90e2;">Nugget says:</h2>
+                    <p><b>Drag and Drop!</b></p>
+                    <p>Grab a word from the <b>Word Bank</b> on the left and drop it into the box where it belongs.</p>
+                    <ul>
+                        <li>If it's correct, it <b>sticks</b> (turns green).</li>
+                        <li>If it's wrong, it <b>shakes</b> and disappears.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="certInputModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Well Done!</h2>
+            <img src="Nugget.png" alt="Nugget" style="width:80px;">
+            <p>You've mastered Maths Vocabulary!</p>
+            <input type="text" id="studentName" placeholder="Your Name" style="padding:10px; width:80%; font-size:18px; margin-bottom:15px;">
+            <br>
+            <button class="btn-success" style="background:#28a745; color:white; padding:10px 30px;" onclick="generateCertificate()">Submit</button>
+        </div>
+    </div>
+
+    <div id="certificate-view">
+        <div class="cert-paper">
+            <div style="border: 2px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h1 class="cert-title">Certificate of Achievement</h1>
+                <img src="Nugget.png" alt="Nugget" style="width:120px; margin: 10px 0;">
+                <div class="cert-body">
+                    <p>This certifies that</p>
+                    <h2 id="certName" style="font-size:32px; color:#333; margin:10px 0;">Student Name</h2>
+                    <p>has successfully identified mathematical vocabulary for:</p>
+                    <p><b>Operations, Fractions, Powers, Decimals & Number Sets</b></p>
+                    <p style="font-size:14px; color:#888;">Date: <span id="certDate"></span> | Code: <span id="certCode"></span></p>
+                </div>
+                <div class="signature-section">
+                    <div style="text-align: center;">
+                        <div style="font-family: 'Brush Script MT', cursive; font-size: 28px; color:#4a90e2;">Nugget</div>
+                        <div style="border-top: 1px solid #999; width: 150px; margin-top: 5px;">Signed</div>
+                    </div>
+                    <div class="paw-print">🐾</div>
+                </div>
+            </div>
+        </div>
+        <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+
+    <script>
+        /* --- UTILS --- */
+        const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+        /* --- TEMPLATES --- */
+        
+        // Part 1: Basic Operations - COMPACT
+        function getOpHTML(type) {
+            let n1, n2, ans, sign;
+            let words = [];
+            
+            if(type === 'add') {
+                n1 = r(2,20); n2 = r(2,20); ans = n1+n2; sign = '+';
+                words = ["Addend", "Addend", "Sum"];
+            } else if (type === 'sub') {
+                n2 = r(2,20); ans = r(2,20); n1 = n2+ans; sign = '&minus;';
+                words = ["Minuend", "Subtrahend", "Difference"];
+            } else if (type === 'mult') {
+                n1 = r(2,9); n2 = r(2,9); ans = n1*n2; sign = '&times;';
+                words = ["Factor", "Factor", "Product"];
+            } else {
+                n2 = r(2,9); ans = r(2,9); n1 = n2*ans; sign = '&divide;';
+                words = ["Dividend", "Divisor", "Quotient"];
+            }
+
+            // Positions: Box Y=10. Number Y=80.
+            // SVG Line: Box Bottom (45) to Number Top - 5px (75).
+            return {
+                words: words,
+                html: `
+                    <div class="drop-zone" data-target="${words[0]}" style="top: 10px; left: 120px;"></div>
+                    <div class="drop-zone" data-target="${words[1]}" style="top: 10px; left: 280px;"></div>
+                    <div class="drop-zone" data-target="${words[2]}" style="top: 10px; left: 450px;"></div>
+
+                    <svg class="svg-overlay">
+                        <line x1="170" y1="45" x2="160" y2="75" />
+                        <line x1="330" y1="45" x2="290" y2="75" />
+                        <line x1="500" y1="45" x2="440" y2="75" />
+                    </svg>
+
+                    <div class="math-content" style="top: 80px; left: 140px;">${n1}</div>
+                    <div class="math-content" style="top: 80px; left: 220px;">${sign}</div>
+                    <div class="math-content" style="top: 80px; left: 270px;">${n2}</div>
+                    <div class="math-content" style="top: 80px; left: 350px;">=</div>
+                    <div class="math-content" style="top: 80px; left: 420px;">${ans}</div>
+                `
+            };
+        }
+
+        // Part 2: Fraction Structure
+        function getFractionHTML() {
+            const num = r(1,9);
+            const den = r(2,15);
+            return {
+                words: ["Numerator", "Denominator", "Fraction", "Fraction bar"],
+                html: `
+                     <div class="drop-zone" data-target="Fraction" style="top: 80px; left: 20px;"></div>
+                    
+                    <div class="drop-zone" data-target="Numerator" style="top: 10px; left: 230px;"></div>
+                    
+                    <div class="drop-zone" data-target="Denominator" style="top: 155px; left: 230px;"></div>
+                    
+                    <div class="drop-zone" data-target="Fraction bar" style="top: 80px; left: 380px;"></div>
+
+                    <svg class="svg-overlay">
+                        <path d="M 230 60 Q 230 50 250 50 L 310 50 Q 330 50 330 80 L 330 120 Q 330 150 310 150 L 250 150 Q 230 150 230 130 Z" class="dashed-lasso" />
+                        <line x1="130" y1="100" x2="230" y2="100" />
+                        
+                        <line x1="380" y1="100" x2="280" y2="97" />
+
+                        <line x1="280" y1="45" x2="280" y2="60" />
+                        <line x1="280" y1="155" x2="280" y2="130" />
+                    </svg>
+
+                    <div class="math-content" style="top: 65px; left: 260px;">
+                        <div class="fraction">
+                            <span style="display:block; line-height:30px;">${num}</span>
+                            <div class="frac-bar"></div>
+                            <span style="display:block; line-height:30px;">${den}</span>
+                        </div>
+                    </div>
+                `
+            }
+        }
+
+        // Part 2: Power Structure
+        function getPowerHTML() {
+            const b = r(2,9);
+            const e = r(2,5);
+            return {
+                words: ["Base", "Exponent", "Power"],
+                html: `
+                    <div class="drop-zone" data-target="Power" style="top: 80px; left: 20px;"></div>
+                    
+                    <div class="drop-zone" data-target="Exponent" style="top: 10px; left: 280px;"></div>
+                    
+                    <div class="drop-zone" data-target="Base" style="top: 155px; left: 230px;"></div>
+
+                    <svg class="svg-overlay">
+                         <rect x="250" y="60" width="90" height="80" rx="10" class="dashed-lasso" />
+                        <line x1="130" y1="100" x2="250" y2="100" />
+
+                        <line x1="320" y1="45" x2="310" y2="75" />
+                        <line x1="280" y1="155" x2="280" y2="125" />
+                    </svg>
+
+                    <div class="math-content" style="top: 70px; left: 260px;">
+                        <div class="exponent">
+                            <span class="base">${b}</span>
+                            <span class="power-num">${e}</span>
+                        </div>
+                    </div>
+                `
+            }
+        }
+
+        // Part 2: Reciprocal
+        function getReciprocalHTML() {
+            const n = r(2,5);
+            const d = r(6,9);
+            return {
+                words: ["Reciprocal"],
+                html: `
+                    <div class="drop-zone" data-target="Reciprocal" style="top: 10px; left: 200px;"></div>
+                    
+                    <svg class="svg-overlay">
+                        <line x1="220" y1="100" x2="280" y2="100" />
+                        <path d="M 220 100 L 230 95 M 220 100 L 230 105" />
+                        <path d="M 280 100 L 270 95 M 280 100 L 270 105" />
+                    </svg>
+
+                    <div class="math-content" style="top: 70px; left: 150px;">
+                        <div class="fraction"><span>${n}</span><div class="frac-bar"></div><span>${d}</span></div>
+                    </div>
+                    
+                    <div class="math-content" style="top: 70px; left: 300px;">
+                        <div class="fraction"><span>${d}</span><div class="frac-bar"></div><span>${n}</span></div>
+                    </div>
+                `
+            }
+        }
+
+        // Part 2: Decimal
+        function getDecimalHTML() {
+            // Generate number
+            const hundreds = r(1,9);
+            const tens = r(0,9);
+            const ones = r(0,9);
+            const tenths = r(0,9);
+            const hundths = r(0,9);
+            
+            // Revised coordinates assuming letter-spacing 3px and font 32px
+            // Start X for text is 200px.
+            // H(200), T(225), O(250), .(270), t(285), h(310)
+            const xPos = {
+                "Hundreds digit": 211,
+                "Tens digit": 232,
+                "Ones digit": 253,
+                "Decimal Point": 272, // Dot center
+                "Tenths digit": 293,
+                "Hundredths digit": 314
+            };
+
+            // Define ALL potential parts
+            const allParts = [
+                { id: "Hundreds digit", x: xPos["Hundreds digit"] },
+                { id: "Tens digit", x: xPos["Tens digit"] },
+                { id: "Ones digit", x: xPos["Ones digit"] },
+                { id: "Decimal Point", x: xPos["Decimal Point"] },
+                { id: "Tenths digit", x: xPos["Tenths digit"] },
+                { id: "Hundredths digit", x: xPos["Hundredths digit"] }
+            ];
+
+            // Always select Decimal Point
+            let targets = [allParts[3]]; 
+            
+            // Select 2 other random targets
+            let otherTargets = allParts.filter(t => t.id !== "Decimal Point").sort(() => 0.5 - Math.random()).slice(0, 2);
+            targets = targets.concat(otherTargets);
+
+            // Separate: Digits (Above) and Point (Below)
+            let topTargets = targets.filter(t => t.id !== "Decimal Point").sort((a,b) => a.x - b.x);
+            let botTarget = targets.find(t => t.id === "Decimal Point");
+
+            // Populate Words
+            let words = ["Decimal"]; 
+            allParts.forEach(p => words.push(p.id));
+
+            // Fixed drop zone positions (Top Row)
+            const dropX = [180, 320]; // Just two digit boxes usually
+            
+            // Build HTML
+            // Top Targets (Digits)
+            let digitHTML = '';
+            topTargets.forEach((t, index) => {
+                let boxLeft = 180 + (index * 140); // Spaced out
+                digitHTML += `<div class="drop-zone" data-target="${t.id}" style="top: 10px; left: ${boxLeft}px;"></div>`;
+                // Line: Box Bottom (45) to Digit Top-5px (85)
+                digitHTML += `<svg class="svg-overlay"><line x1="${boxLeft+50}" y1="45" x2="${t.x}" y2="85" /></svg>`;
+            });
+
+            // Bottom Target (Point)
+            // Box Below: Y=150. Line Start: Y=150 to Point Bot+5px (115)
+            let pointHTML = `<div class="drop-zone" data-target="Decimal Point" style="top: 150px; left: 300px;"></div>`;
+            pointHTML += `<svg class="svg-overlay"><line x1="350" y1="150" x2="${botTarget.x}" y2="115" /></svg>`;
+
+            return { words, html: `
+                <div class="drop-zone" data-target="Decimal" style="top: 80px; left: 20px;"></div>
+                
+                ${digitHTML}
+                ${pointHTML}
+
+                <svg class="svg-overlay">
+                    <rect x="200" y="80" width="160" height="50" rx="5" class="dashed-lasso" />
+                    <line x1="130" y1="100" x2="200" y2="100" />
+                </svg>
+
+                <div class="math-content" style="top: 90px; left: 200px; font-family: monospace; letter-spacing: 3px;">
+                    ${hundreds}${tens}${ones}.${tenths}${hundths}
+                </div>
+            `};
+        }
+
+        // Part 3: Sets Data
+        const part3Data = [
+            { def: "0, 1, 2, 3, 4, ...", word: "Whole numbers" },
+            { def: "1, 2, 3, 4, 5, ...", word: "Natural numbers" },
+            { def: "... -3, -2, -1, 0, 1, 2, 3, ...", word: "Integers" },
+            { def: "Can be written as fractions or terminating/recurring decimals", word: "Rational numbers" },
+            { def: "Cannot be written as a fraction (e.g. Pi)", word: "Irrational numbers" },
+            { def: "All numbers on the number line", word: "Real numbers" }
+        ];
+
+        /* --- LOGIC --- */
+
+        let currentPart = 1;
+        let totalZones = 0;
+        let correctCount = 0;
+
+        window.onload = function() {
+            loadLevel(1);
+        };
+
+        function loadLevel(partNum) {
+            currentPart = partNum;
+            const workspace = document.getElementById('workspace');
+            const wordBank = document.getElementById('wordBank');
+            
+            workspace.innerHTML = '';
+            wordBank.innerHTML = '<h3>Word Bank</h3>';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('certBtn').style.display = 'none';
+            correctCount = 0;
+            totalZones = 0;
+            let allWords = [];
+
+            // GENERATE CONTENT
+            if (partNum === 1) {
+                const ops = ['add', 'sub', 'mult', 'div'];
+                ops.sort(() => Math.random() - 0.5);
+                ops.forEach(op => {
+                    let data = getOpHTML(op);
+                    createDiagramRow(workspace, data.html);
+                    allWords = [...allWords, ...data.words];
+                });
+            } else if (partNum === 2) {
+                let items = [getFractionHTML(), getPowerHTML(), getReciprocalHTML(), getDecimalHTML()];
+                items.sort(() => Math.random() - 0.5);
+                items.forEach(item => {
+                    createDiagramRow(workspace, item.html);
+                    allWords = [...allWords, ...item.words];
+                });
+            } else if (partNum === 3) {
+                let data = [...part3Data].sort(() => Math.random() - 0.5);
+                data.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'set-row';
+                    row.innerHTML = `
+                        <div class="drop-zone" data-target="${item.word}" style="min-width:150px;"></div>
+                        <span>: &nbsp; ${item.def}</span>
+                    `;
+                    workspace.appendChild(row);
+                    allWords.push(item.word);
+                });
+            }
+
+            // Count Drop Zones
+            setTimeout(() => {
+                totalZones = document.querySelectorAll('#workspace .drop-zone').length;
+            }, 0);
+
+            // CREATE WORD BANK
+            // 1. Unique only (remove duplicates)
+            let uniqueWords = [...new Set(allWords)];
+            // 2. Sort Alphabetically
+            uniqueWords.sort();
+            
+            uniqueWords.forEach(word => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.draggable = true;
+                tile.innerText = word;
+                tile.dataset.word = word;
+                // Add specific ID for bank items so we know not to remove them
+                tile.id = 'tile-bank-' + word.replace(/\s/g,''); 
+                tile.addEventListener('dragstart', dragStart);
+                wordBank.appendChild(tile);
+            });
+
+            // ATTACH EVENTS
+            setTimeout(() => {
+                document.querySelectorAll('.drop-zone').forEach(zone => {
+                    zone.addEventListener('dragover', dragOver);
+                    zone.addEventListener('dragleave', dragLeave);
+                    zone.addEventListener('drop', drop);
+                });
+            }, 0);
+
+            updateProgressUI(partNum);
+        }
+
+        function createDiagramRow(container, innerHTML) {
+            const row = document.createElement('div');
+            row.className = 'diagram-row';
+            row.innerHTML = innerHTML;
+            container.appendChild(row);
+        }
+
+        function updateProgressUI(n) {
+            for(let i=1; i<=4; i++) {
+                const el = document.getElementById('prog'+i);
+                el.className = 'progress-segment';
+                if (i < n) el.classList.add('done');
+                if (i === n) el.classList.add('active');
+            }
+        }
+
+        /* --- DRAG DROP --- */
+        function dragStart(e) {
+            e.dataTransfer.setData("text/plain", e.target.dataset.word);
+            e.dataTransfer.setData("id", e.target.id);
+            // Only fade if it's NOT a bank tile (infinite source logic)
+            if(!e.target.id.startsWith('tile-bank-')) {
+                e.target.style.opacity = '0.5';
+            }
+        }
+
+        function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+
+        function drop(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            zone.classList.remove('drag-over');
+            if(zone.hasChildNodes()) return; 
+
+            const word = e.dataTransfer.getData("text/plain");
+            const id = e.dataTransfer.getData("id");
+            const originalTile = document.getElementById(id);
+            const targetWord = zone.dataset.target;
+
+            // Reset opacity
+            if(originalTile) originalTile.style.opacity = '1';
+
+            if (word === targetWord) {
+                // Correct Drop
+                const newTile = document.createElement('div');
+                newTile.className = 'tile correct';
+                newTile.innerText = word;
+                zone.appendChild(newTile);
+                
+                // INFINITE SOURCE LOGIC: 
+                // If the source was the bank, we do NOT remove it.
+                // If the source was another drop zone (moved from wrong to right), we remove original.
+                if(originalTile && !originalTile.id.startsWith('tile-bank-')) {
+                    originalTile.remove();
+                }
+                
+                correctCount++;
+                checkCompletion();
+            } else {
+                // Incorrect Drop (Shake)
+                const ghost = document.createElement('div');
+                ghost.className = 'tile shaking';
+                ghost.innerText = word;
+                zone.appendChild(ghost);
+                
+                if(originalTile && !originalTile.id.startsWith('tile-bank-')) {
+                   originalTile.style.visibility = 'hidden';
+                }
+
+                setTimeout(() => {
+                    ghost.remove();
+                    if(originalTile) originalTile.style.visibility = 'visible';
+                }, 500);
+            }
+        }
+
+        function checkCompletion() {
+            if (correctCount === totalZones) {
+                if (currentPart < 3) {
+                    document.getElementById('nextBtn').style.display = 'block';
+                } else {
+                    document.getElementById('certBtn').style.display = 'block';
+                }
+            }
+        }
+
+        /* --- CONTROLS --- */
+        function randomize() { loadLevel(currentPart); }
+        function resetPart() { loadLevel(currentPart); }
+        function nextPart() { if(currentPart < 3) { loadLevel(currentPart + 1); window.scrollTo(0,0); } }
+        function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
+        function closeModal(e, id) { if(e.target === document.getElementById(id)) document.getElementById(id).style.display = 'none'; }
+        function openCertInput() { document.getElementById('certInputModal').style.display = 'flex'; }
+
+        function generateCertificate() {
+            const name = document.getElementById('studentName').value;
+            if (!name) return alert("Please enter your name!");
+            document.getElementById('certInputModal').style.display = 'none';
+            document.getElementById('gameInterface').style.display = 'none';
+            document.getElementById('controls').style.display = 'none';
+            document.querySelector('.progress-wrapper').style.display = 'none';
+            document.querySelector('.header-text').style.display = 'none'; // hide header text
+            document.querySelector('.nugget-mascot').style.display = 'none'; // hide header nugget
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('certBtn').style.display = 'none';
+            document.getElementById('certName').innerText = name;
+            document.getElementById('certDate').innerText = new Date().toLocaleDateString();
+            document.getElementById('certCode').innerText = Math.floor(10000 + Math.random() * 90000);
+            document.getElementById('certificate-view').style.display = 'block';
+            window.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>
